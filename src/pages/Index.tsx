@@ -10,16 +10,24 @@ import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
 
+interface SelectedCategories {
+  [mainCategory: string]: string[];
+}
+
 const Index = () => {
   const [showInterests, setShowInterests] = useState(true);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
   const [newPost, setNewPost] = useState('');
 
-  const interests = [
-    'Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Tarih', 'Coğrafya',
-    'Edebiyat', 'Felsefe', 'Programlama', 'Yapay Zeka', 'Dil Öğrenimi',
-    'Sanat', 'Müzik', 'Psikoloji', 'Sosyoloji', 'Ekonomi'
-  ];
+  const examCategories = {
+    'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür'],
+    'YKS/AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Türk Dili ve Edebiyatı', 'Tarih', 'Coğrafya', 'Felsefe'],
+    'DGS': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
+    'ALES': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
+    'YÖKDİL': ['İngilizce', 'Almanca', 'Fransızca', 'Rusça'],
+    'Öğretmenlik': ['ÖABT Matematik', 'ÖABT Türkçe', 'ÖABT Fen', 'ÖABT Sosyal', 'Eğitim Bilimleri', 'Genel Kültür'],
+    'Mesleki': ['Muhasebe', 'Hukuk', 'Mühendislik', 'Tıp', 'Hemşirelik', 'Diş Hekimliği']
+  };
 
   const samplePosts = [
     {
@@ -46,13 +54,22 @@ const Index = () => {
     }
   ];
 
-  const handleInterestComplete = (selected: string[]) => {
-    setSelectedInterests(selected);
+  const handleInterestComplete = (selected: SelectedCategories) => {
+    setSelectedCategories(selected);
     setShowInterests(false);
   };
 
+  // Seçilen tüm kategorileri düz liste olarak al
+  const getAllSelectedSubjects = () => {
+    const subjects: string[] = [];
+    Object.entries(selectedCategories).forEach(([mainCat, subCats]) => {
+      subjects.push(...subCats);
+    });
+    return subjects;
+  };
+
   if (showInterests) {
-    return <InterestsSelection interests={interests} onComplete={handleInterestComplete} />;
+    return <InterestsSelection examCategories={examCategories} onComplete={handleInterestComplete} />;
   }
 
   return (
@@ -67,14 +84,14 @@ const Index = () => {
               </h1>
             </div>
             <div className="flex items-center space-x-2">
-              {selectedInterests.slice(0, 3).map((interest) => (
-                <Badge key={interest} variant="secondary" className="text-xs">
-                  {interest}
+              {Object.keys(selectedCategories).slice(0, 2).map((category) => (
+                <Badge key={category} variant="secondary" className="text-xs">
+                  {category}
                 </Badge>
               ))}
-              {selectedInterests.length > 3 && (
+              {Object.keys(selectedCategories).length > 2 && (
                 <Badge variant="outline" className="text-xs">
-                  +{selectedInterests.length - 3}
+                  +{Object.keys(selectedCategories).length - 2}
                 </Badge>
               )}
             </div>
