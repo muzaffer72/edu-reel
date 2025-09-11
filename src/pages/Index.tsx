@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePosts } from '@/hooks/usePosts';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
 }
 
 const Index = () => {
-  const [showInterests, setShowInterests] = useState(true);
+  const { user, signOut } = useAuth();
+  const { posts, loading, createPost, toggleLike, toggleCorrectAnswer } = usePosts();
+  const { toast } = useToast();
+  const [showInterests, setShowInterests] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
   const [newPost, setNewPost] = useState('');
+  const [profile, setProfile] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const examCategories = {
     'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
@@ -31,34 +41,82 @@ const Index = () => {
     'PMYO': ['Matematik', 'Türkçe', 'Genel Kültür', 'IQ-Mantık']
   };
 
-  const samplePosts = [
-    {
-      id: 1,
-      user: { name: 'Dr. Ayşe Kaya', username: '@ayse_edu', avatar: 'AK' },
-      content: 'Matematik problemlerini çözerken görselleştirme tekniğini kullanmayı denediniz mi? Karmaşık konuları anlamak için çok etkili! 📊',
-      timestamp: '2 saat önce',
-      interests: ['Matematik', 'Eğitim'],
-      likes: 45,
-      comments: 12,
-      shares: 8,
-      isCorrectAnswer: true
-    },
-    {
-      id: 2,
-      user: { name: 'Mehmet Öz', username: '@mehmet_fizik', avatar: 'MÖ' },
-      content: 'Newton\'un hareket yasalarını günlük hayattan örneklerle açıklayalım. Hangi durumları gözlemlediniz?',
-      timestamp: '4 saat önce',
-      interests: ['Fizik'],
-      likes: 67,
-      comments: 23,
-      shares: 15,
-      isCorrectAnswer: false
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
     }
-  ];
+  }, [user]);
 
-  const handleInterestComplete = (selected: SelectedCategories) => {
-    setSelectedCategories(selected);
-    setShowInterests(false);
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setProfile(data);
+      if (data.exam_categories && Object.keys(data.exam_categories).length > 0) {
+        setSelectedCategories(data.exam_categories as SelectedCategories);
+      } else {
+        setShowInterests(true);
+      }
+      } else {
+        setShowInterests(true);
+      }
+    } catch (error: any) {
+      console.error('Profile fetch error:', error);
+      setShowInterests(true);
+    }
+  };
+
+
+  const handleInterestComplete = async (selected: SelectedCategories) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ exam_categories: selected })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setSelectedCategories(selected);
+      setShowInterests(false);
+      
+      toast({
+        title: 'Başarılı',
+        description: 'İlgi alanlarınız kaydedildi',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: 'İlgi alanları kaydedilemedi',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  const handlePostSubmit = async () => {
+    if (!newPost.trim()) return;
+
+    setSubmitting(true);
+    const success = await createPost(newPost, getAllSelectedSubjects());
+    
+    if (success) {
+      setNewPost('');
+    }
+    setSubmitting(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   // Seçilen tüm kategorileri düz liste olarak al
@@ -85,17 +143,35 @@ const Index = () => {
                 EduSocial
               </h1>
             </div>
-            <div className="flex items-center space-x-2">
-              {Object.keys(selectedCategories).slice(0, 2).map((category) => (
-                <Badge key={category} variant="secondary" className="text-xs">
-                  {category}
-                </Badge>
-              ))}
-              {Object.keys(selectedCategories).length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{Object.keys(selectedCategories).length - 2}
-                </Badge>
-              )}
+            
+            <div className="flex items-center space-x-4">
+              {/* Interest badges */}
+              <div className="hidden md:flex items-center space-x-2">
+                {Object.keys(selectedCategories).slice(0, 2).map((category) => (
+                  <Badge key={category} variant="secondary" className="text-xs">
+                    {category}
+                  </Badge>
+                ))}
+                {Object.keys(selectedCategories).length > 2 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{Object.keys(selectedCategories).length - 2}
+                  </Badge>
+                )}
+              </div>
+
+              {/* User menu */}
+              <div className="flex items-center space-x-2">
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm">
+                    <User className="w-4 h-4 mr-1" />
+                    Profil
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Çıkış
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -108,7 +184,7 @@ const Index = () => {
             <div className="flex space-x-4">
               <Avatar>
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  Sen
+                  {profile?.display_name ? getInitials(profile.display_name) : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-4">
@@ -130,10 +206,11 @@ const Index = () => {
                     </Button>
                   </div>
                   <Button 
+                    onClick={handlePostSubmit}
+                    disabled={!newPost.trim() || submitting}
                     className="bg-gradient-primary hover:opacity-90 transition-all shadow-glow"
-                    disabled={!newPost.trim()}
                   >
-                    Paylaş
+                    {submitting ? 'Paylaşılıyor...' : 'Paylaş'}
                   </Button>
                 </div>
               </div>
@@ -142,24 +219,43 @@ const Index = () => {
 
           {/* Posts Feed */}
           <div className="space-y-4">
-            {samplePosts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-            
-            <VideoPost
-              id={3}
-              user={{ name: 'Prof. Zeynep Yılmaz', username: '@zeynep_bio', avatar: 'ZY' }}
-              title="Hücre Bölünmesi: Mitoz ve Mayoz Arasındaki Farklar"
-              description="Bu videoda mitoz ve mayoz arasındaki temel farkları görsel animasyonlarla açıklıyorum."
-              videoUrl="https://example.com/video.mp4"
-              thumbnail="https://example.com/thumbnail.jpg"
-              duration="8:45"
-              timestamp="6 saat önce"
-              interests={['Biyoloji']}
-              likes={128}
-              comments={34}
-              shares={42}
-            />
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">Gönderiler yükleniyor...</div>
+              </div>
+            ) : posts.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="text-muted-foreground">
+                  Henüz gönderi bulunmuyor. İlk gönderiyi sen paylaş!
+                </div>
+              </Card>
+            ) : (
+              posts.map((post) => (
+                <PostCard 
+                  key={post.id} 
+                  post={{
+                    id: post.id,
+                    user: {
+                      name: post.profiles?.display_name || 'Anonim Kullanıcı',
+                      username: '',
+                      avatar: getInitials(post.profiles?.display_name || 'A')
+                    },
+                    content: post.content,
+                    timestamp: new Date(post.created_at).toLocaleString('tr-TR'),
+                    interests: post.exam_categories || [],
+                    likes: post.likes_count || 0,
+                    comments: post.comments_count || 0,
+                    shares: post.shares_count || 0,
+                    isCorrectAnswer: post.is_correct_answer || false,
+                    user_liked: post.user_liked,
+                    user_id: post.user_id
+                  }}
+                  onLike={() => toggleLike(post.id)}
+                  onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}
+                  currentUserId={user?.id}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>

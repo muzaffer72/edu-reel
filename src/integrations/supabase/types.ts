@@ -14,7 +14,157 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          comments_count: number | null
+          content: string
+          created_at: string
+          exam_categories: string[] | null
+          id: string
+          image_url: string | null
+          is_correct_answer: boolean | null
+          likes_count: number | null
+          post_type: string
+          shares_count: number | null
+          updated_at: string
+          user_id: string
+          video_duration: string | null
+          video_thumbnail: string | null
+          video_url: string | null
+        }
+        Insert: {
+          comments_count?: number | null
+          content: string
+          created_at?: string
+          exam_categories?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_correct_answer?: boolean | null
+          likes_count?: number | null
+          post_type?: string
+          shares_count?: number | null
+          updated_at?: string
+          user_id: string
+          video_duration?: string | null
+          video_thumbnail?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string
+          created_at?: string
+          exam_categories?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_correct_answer?: boolean | null
+          likes_count?: number | null
+          post_type?: string
+          shares_count?: number | null
+          updated_at?: string
+          user_id?: string
+          video_duration?: string | null
+          video_thumbnail?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          exam_categories: Json | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          exam_categories?: Json | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          exam_categories?: Json | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

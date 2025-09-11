@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Share2, CheckCircle } from 'lucide-react';
 
 interface Post {
-  id: number;
+  id: string;
   user: {
     name: string;
     username: string;
@@ -19,14 +19,25 @@ interface Post {
   comments: number;
   shares: number;
   isCorrectAnswer: boolean;
+  user_liked?: boolean;
+  user_id?: string;
 }
 
 interface PostCardProps {
   post: Post;
+  onLike?: () => void;
+  onToggleCorrectAnswer?: () => void;
+  currentUserId?: string;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post }) => {
-  const [liked, setLiked] = useState(false);
+export const PostCard: React.FC<PostCardProps> = ({ 
+  post, 
+  onLike, 
+  onToggleCorrectAnswer, 
+  currentUserId 
+}) => {
+  const isOwnPost = currentUserId === post.user_id;
+  const [liked, setLiked] = useState(post.user_liked || false);
   const [isCorrect, setIsCorrect] = useState(post.isCorrectAnswer);
 
   return (
@@ -67,42 +78,50 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex space-x-6">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`text-muted-foreground hover:text-red-500 transition-colors ${liked ? 'text-red-500' : ''}`}
-                onClick={() => setLiked(!liked)}
-              >
-                <Heart className={`w-4 h-4 mr-2 ${liked ? 'fill-current' : ''}`} />
-                <span className="text-sm">{post.likes + (liked ? 1 : 0)}</span>
-              </Button>
-              
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary transition-colors">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                <span className="text-sm">{post.comments}</span>
-              </Button>
-              
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary transition-colors">
-                <Share2 className="w-4 h-4 mr-2" />
-                <span className="text-sm">{post.shares}</span>
-              </Button>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`transition-all ${isCorrect ? 'text-secondary hover:text-secondary/80' : 'text-muted-foreground hover:text-secondary'}`}
-              onClick={() => setIsCorrect(!isCorrect)}
+        {/* Actions */}
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex items-center space-x-6">
+            <button 
+              onClick={onLike}
+              className={`flex items-center space-x-2 transition-colors group ${
+                post.user_liked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+              }`}
             >
-              <CheckCircle className={`w-4 h-4 mr-1 ${isCorrect ? 'fill-current' : ''}`} />
-              <span className="text-xs font-medium">
-                {isCorrect ? 'Doğru işaretli' : 'Doğru olarak işaretle'}
-              </span>
-            </Button>
+              <Heart className={`w-4 h-4 ${post.user_liked ? 'fill-red-500' : 'group-hover:fill-red-500'}`} />
+              <span className="text-sm">{post.likes}</span>
+            </button>
+            <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+              <MessageCircle className="w-4 h-4" />
+              <span className="text-sm">{post.comments}</span>
+            </button>
+            <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+              <Share2 className="w-4 h-4" />
+              <span className="text-sm">{post.shares}</span>
+            </button>
           </div>
+          
+          <div className="flex items-center space-x-2">
+            {isOwnPost && (
+              <button
+                onClick={onToggleCorrectAnswer}
+                className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                  post.isCorrectAnswer 
+                    ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-green-500/20 hover:text-green-700'
+                }`}
+              >
+                <CheckCircle className="w-3 h-3" />
+                <span>{post.isCorrectAnswer ? 'Doğru Cevap' : 'Doğru İşaretle'}</span>
+              </button>
+            )}
+            {!isOwnPost && post.isCorrectAnswer && (
+              <div className="flex items-center space-x-1 bg-green-500/20 text-green-700 px-2 py-1 rounded-full">
+                <CheckCircle className="w-3 h-3" />
+                <span className="text-xs font-medium">Doğru Cevap</span>
+              </div>
+            )}
+          </div>
+        </div>
         </div>
       </div>
     </Card>
