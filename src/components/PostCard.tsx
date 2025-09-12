@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Share2, CheckCircle } from 'lucide-react';
 
@@ -11,6 +11,7 @@ interface Post {
     name: string;
     username: string;
     avatar: string;
+    avatar_url?: string;
   };
   content: string;
   timestamp: string;
@@ -21,6 +22,7 @@ interface Post {
   isCorrectAnswer: boolean;
   user_liked?: boolean;
   user_id?: string;
+  attachments?: string[];
 }
 
 interface PostCardProps {
@@ -44,9 +46,13 @@ export const PostCard: React.FC<PostCardProps> = ({
     <Card className="p-6 shadow-md border-0 bg-gradient-card hover:shadow-lg transition-all duration-300">
       <div className="flex space-x-4">
         <Avatar>
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {post.user.avatar}
-          </AvatarFallback>
+          {post.user.avatar_url ? (
+            <AvatarImage src={post.user.avatar_url} alt="Profil fotoğrafı" />
+          ) : (
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {post.user.avatar}
+            </AvatarFallback>
+          )}
         </Avatar>
         
         <div className="flex-1 space-y-3">
@@ -67,6 +73,21 @@ export const PostCard: React.FC<PostCardProps> = ({
           {/* Content */}
           <div className="space-y-3">
             <p className="text-foreground leading-relaxed">{post.content}</p>
+            
+            {/* Attachments */}
+            {post.attachments && post.attachments.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                {post.attachments.map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`Ek ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                ))}
+              </div>
+            )}
             
             {/* Interests */}
             <div className="flex flex-wrap gap-1">

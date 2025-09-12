@@ -4,13 +4,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Save, X, Calendar, BookOpen } from 'lucide-react';
+import { ArrowLeft, Edit, Save, X, Calendar, BookOpen, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PostCard } from '@/components/PostCard';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface Profile {
   id: string;
@@ -46,6 +47,7 @@ const Profile = () => {
   const { userId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { uploadFile, uploading } = useFileUpload();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -54,6 +56,7 @@ const Profile = () => {
     display_name: '',
     bio: '',
   });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const isOwnProfile = !userId || userId === user?.id;
 
@@ -152,6 +155,41 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    const url = await uploadFile(file, 'avatars');
+    
+    if (url) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: url })
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+
+        setProfile(prev => prev ? { ...prev, avatar_url: url } : null);
+        
+        toast({
+          title: 'Başarılı',
+          description: 'Profil fotoğrafı güncellendi',
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Hata',
+          description: 'Profil fotoğrafı güncellenemedi',
+          variant: 'destructive',
+        });
+      }
+    }
+    
+    setUploadingAvatar(false);
+    event.target.value = '';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -209,11 +247,36 @@ const Profile = () => {
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar */}
             <div className="flex justify-center md:justify-start">
-              <Avatar className="w-24 h-24">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                  {getInitials(profile.display_name || 'U')}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="w-24 h-24">
+                  {profile.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt="Profil fotoğrafı" />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                      {getInitials(profile.display_name || 'U')}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                {isOwnProfile && (
+                  <label className="absolute bottom-0 right-0 cursor-pointer">
+                    <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+                      <Camera className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                    />
+                  </label>
+                )}
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                    <div className="text-white text-xs">Yükleniyor...</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Profile Info */}

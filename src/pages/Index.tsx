@@ -4,9 +4,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
@@ -23,11 +24,13 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const { posts, loading, createPost, toggleLike, toggleCorrectAnswer } = usePosts();
   const { toast } = useToast();
+  const { uploadFile, uploading } = useFileUpload();
   const [showInterests, setShowInterests] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
   const [newPost, setNewPost] = useState('');
   const [profile, setProfile] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState<string[]>([]);
 
   const examCategories = {
     'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
@@ -103,6 +106,21 @@ const Index = () => {
     await signOut();
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const bucket = type === 'image' || type === 'video' ? 'attachments' : 'attachments';
+    const url = await uploadFile(file, bucket);
+    
+    if (url) {
+      setAttachments(prev => [...prev, url]);
+    }
+    
+    // Reset input
+    event.target.value = '';
+  };
+
   const handlePostSubmit = async () => {
     if (!newPost.trim()) return;
 
@@ -111,6 +129,7 @@ const Index = () => {
     
     if (success) {
       setNewPost('');
+      setAttachments([]);
     }
     setSubmitting(false);
   };
@@ -183,9 +202,13 @@ const Index = () => {
           <Card className="p-6 shadow-md border-0 bg-gradient-card">
             <div className="flex space-x-4">
               <Avatar>
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {profile?.display_name ? getInitials(profile.display_name) : 'U'}
-                </AvatarFallback>
+                {profile?.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} alt="Profil fotoğrafı" />
+                ) : (
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {profile?.display_name ? getInitials(profile.display_name) : 'U'}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1 space-y-4">
                 <Textarea
@@ -194,23 +217,80 @@ const Index = () => {
                   onChange={(e) => setNewPost(e.target.value)}
                   className="min-h-[100px] border-0 bg-transparent resize-none focus-visible:ring-0 placeholder:text-muted-foreground"
                 />
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {attachments.map((url, index) => (
+                      <div key={index} className="relative">
+                        <img src={url} alt="Ek" className="w-full h-32 object-cover rounded" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70"
+                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between">
                   <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      Resim
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary">
-                      <Video className="w-4 h-4 mr-2" />
-                      Video
-                    </Button>
+                    <label className="cursor-pointer">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" asChild>
+                        <span>
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          Resim
+                        </span>
+                      </Button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'image')}
+                        disabled={uploading}
+                      />
+                    </label>
+                    
+                    <label className="cursor-pointer">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary" asChild>
+                        <span>
+                          <Video className="w-4 h-4 mr-2" />
+                          Video
+                        </span>
+                      </Button>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'video')}
+                        disabled={uploading}
+                      />
+                    </label>
+                    
+                    <label className="cursor-pointer">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent" asChild>
+                        <span>
+                          <Paperclip className="w-4 h-4 mr-2" />
+                          Dosya
+                        </span>
+                      </Button>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'file')}
+                        disabled={uploading}
+                      />
+                    </label>
                   </div>
                   <Button 
                     onClick={handlePostSubmit}
-                    disabled={!newPost.trim() || submitting}
+                    disabled={!newPost.trim() || submitting || uploading}
                     className="bg-gradient-primary hover:opacity-90 transition-all shadow-glow"
                   >
-                    {submitting ? 'Paylaşılıyor...' : 'Paylaş'}
+                    {uploading ? 'Yükleniyor...' : submitting ? 'Paylaşılıyor...' : 'Paylaş'}
                   </Button>
                 </div>
               </div>
@@ -238,7 +318,8 @@ const Index = () => {
                     user: {
                       name: post.profiles?.display_name || 'Anonim Kullanıcı',
                       username: '',
-                      avatar: getInitials(post.profiles?.display_name || 'A')
+                      avatar: getInitials(post.profiles?.display_name || 'A'),
+                      avatar_url: post.profiles?.avatar_url || undefined
                     },
                     content: post.content,
                     timestamp: new Date(post.created_at).toLocaleString('tr-TR'),
