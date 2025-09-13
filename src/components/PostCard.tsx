@@ -24,6 +24,9 @@ interface Post {
   user_liked?: boolean;
   user_id?: string;
   attachments?: string[];
+  image_url?: string;
+  video_url?: string;
+  video_thumbnail?: string;
 }
 
 interface PostCardProps {

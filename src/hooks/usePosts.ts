@@ -92,39 +92,52 @@ export const usePosts = () => {
     try {
       setLoading(true);
       
+      // First get posts
       const { data: postsData, error } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles!posts_user_id_fkey (
-            display_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Check which posts the user has liked
-      if (user && postsData) {
-        const postIds = postsData.map(post => post.id);
-        const { data: likesData } = await supabase
-          .from('likes')
-          .select('post_id')
-          .eq('user_id', user.id)
-          .in('post_id', postIds);
+      // Then get profiles for each post
+      if (postsData && postsData.length > 0) {
+        const userIds = [...new Set(postsData.map(post => post.user_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
 
-        const likedPostIds = new Set(likesData?.map(like => like.post_id) || []);
-        
-        const postsWithLikes = postsData.map(post => ({
+        // Merge profile data with posts
+        const postsWithProfiles = postsData.map(post => ({
           ...post,
-          user_liked: likedPostIds.has(post.id)
+          profiles: profilesData?.find(profile => profile.user_id === post.user_id) || null
         }));
 
-        setPosts(postsWithLikes as unknown as Post[]);
+        // Check which posts the user has liked
+        if (user) {
+          const postIds = postsWithProfiles.map(post => post.id);
+          const { data: likesData } = await supabase
+            .from('likes')
+            .select('post_id')
+            .eq('user_id', user.id)
+            .in('post_id', postIds);
+
+          const likedPostIds = new Set(likesData?.map(like => like.post_id) || []);
+          
+          const postsWithLikes = postsWithProfiles.map(post => ({
+            ...post,
+            user_liked: likedPostIds.has(post.id)
+          }));
+
+          setPosts(postsWithLikes as unknown as Post[]);
+        } else {
+          setPosts(postsWithProfiles as unknown as Post[]);
+        }
       } else {
-        setPosts((postsData || []) as unknown as Post[]);
+        setPosts([]);
       }
+
     } catch (error: any) {
       toast({
         title: 'Hata',
@@ -147,9 +160,24 @@ export const usePosts = () => {
         post_type: 'text'
       };
 
-      // Add attachment URL if provided
+      // Handle different types of attachments
       if (attachments.length > 0) {
-        insertData.image_url = attachments[0]; // For now, just use the first attachment
+        const firstAttachment = attachments[0];
+        
+        // Check if it's an image
+        if (firstAttachment.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          insertData.image_url = firstAttachment;
+          insertData.post_type = 'image';
+        }
+        // Check if it's a video
+        else if (firstAttachment.match(/\.(mp4|webm|ogg|mov)$/i)) {
+          insertData.video_url = firstAttachment;
+          insertData.post_type = 'video';
+        }
+        // For other files, treat as attachment
+        else {
+          insertData.image_url = firstAttachment;
+        }
       }
 
       const { error } = await supabase
