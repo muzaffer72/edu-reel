@@ -16,26 +16,35 @@ export type Database = {
     Tables: {
       comments: {
         Row: {
+          attachment_url: string | null
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           post_id: string
+          proposed_as_correct: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          attachment_url?: string | null
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id: string
+          proposed_as_correct?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          attachment_url?: string | null
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id?: string
+          proposed_as_correct?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -82,6 +91,7 @@ export type Database = {
         Row: {
           comments_count: number | null
           content: string
+          correct_comment_id: string | null
           created_at: string
           exam_categories: string[] | null
           id: string
@@ -99,6 +109,7 @@ export type Database = {
         Insert: {
           comments_count?: number | null
           content: string
+          correct_comment_id?: string | null
           created_at?: string
           exam_categories?: string[] | null
           id?: string
@@ -116,6 +127,7 @@ export type Database = {
         Update: {
           comments_count?: number | null
           content?: string
+          correct_comment_id?: string | null
           created_at?: string
           exam_categories?: string[] | null
           id?: string
@@ -130,7 +142,15 @@ export type Database = {
           video_thumbnail?: string | null
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_correct_comment_fk"
+            columns: ["correct_comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

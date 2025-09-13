@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Share2, CheckCircle } from 'lucide-react';
+import { Comments } from '@/components/Comments';
 
 interface Post {
   id: string;
@@ -41,6 +42,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isOwnPost = currentUserId === post.user_id;
   const [liked, setLiked] = useState(post.user_liked || false);
   const [isCorrect, setIsCorrect] = useState(post.isCorrectAnswer);
+  const [showComments, setShowComments] = useState(false);
 
   return (
     <Card className="p-6 shadow-md border-0 bg-gradient-card hover:shadow-lg transition-all duration-300">
@@ -99,50 +101,57 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-4">
-          <div className="flex items-center space-x-6">
-            <button 
-              onClick={onLike}
-              className={`flex items-center space-x-2 transition-colors group ${
-                post.user_liked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${post.user_liked ? 'fill-red-500' : 'group-hover:fill-red-500'}`} />
-              <span className="text-sm">{post.likes}</span>
-            </button>
-            <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-              <MessageCircle className="w-4 h-4" />
-              <span className="text-sm">{post.comments}</span>
-            </button>
-            <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-              <Share2 className="w-4 h-4" />
-              <span className="text-sm">{post.shares}</span>
-            </button>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {isOwnPost && (
-              <button
-                onClick={onToggleCorrectAnswer}
-                className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                  post.isCorrectAnswer 
-                    ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-green-500/20 hover:text-green-700'
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center space-x-6">
+              <button 
+                onClick={onLike}
+                className={`flex items-center space-x-2 transition-colors group ${
+                  post.user_liked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
                 }`}
               >
-                <CheckCircle className="w-3 h-3" />
-                <span>{post.isCorrectAnswer ? 'Doğru Cevap' : 'Doğru İşaretle'}</span>
+                <Heart className={`w-4 h-4 ${post.user_liked ? 'fill-red-500' : 'group-hover:fill-red-500'}`} />
+                <span className="text-sm">{post.likes}</span>
               </button>
-            )}
-            {!isOwnPost && post.isCorrectAnswer && (
-              <div className="flex items-center space-x-1 bg-green-500/20 text-green-700 px-2 py-1 rounded-full">
-                <CheckCircle className="w-3 h-3" />
-                <span className="text-xs font-medium">Doğru Cevap</span>
-              </div>
-            )}
+              <button onClick={() => setShowComments((v) => !v)} className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-sm">{post.comments}</span>
+              </button>
+              <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+                <Share2 className="w-4 h-4" />
+                <span className="text-sm">{post.shares}</span>
+              </button>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {isOwnPost && (
+                <button
+                  onClick={onToggleCorrectAnswer}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                    post.isCorrectAnswer 
+                      ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-green-500/20 hover:text-green-700'
+                  }`}
+                >
+                  <CheckCircle className="w-3 h-3" />
+                  <span>{post.isCorrectAnswer ? 'Doğru Cevap' : 'Doğru İşaretle'}</span>
+                </button>
+              )}
+              {!isOwnPost && post.isCorrectAnswer && (
+                <div className="flex items-center space-x-1 bg-green-500/20 text-green-700 px-2 py-1 rounded-full">
+                  <CheckCircle className="w-3 h-3" />
+                  <span className="text-xs font-medium">Doğru Cevap</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+
+          {/* Comments Section */}
+          {showComments && (
+            <div className="pt-4">
+              <Comments postId={post.id} postOwnerId={post.user_id} />
+            </div>
+          )}
         </div>
       </div>
     </Card>
