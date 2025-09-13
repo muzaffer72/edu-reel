@@ -77,7 +77,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <p className="text-foreground leading-relaxed">{post.content}</p>
             
             {/* Attachments */}
-            {post.attachments && post.attachments.length > 0 && (
+            {(post.attachments && post.attachments.length > 0) && (
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {post.attachments.map((url, index) => (
                   <img

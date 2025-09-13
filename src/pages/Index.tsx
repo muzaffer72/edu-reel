@@ -125,7 +125,7 @@ const Index = () => {
     if (!newPost.trim()) return;
 
     setSubmitting(true);
-    const success = await createPost(newPost, getAllSelectedSubjects());
+    const success = await createPost(newPost, getAllSelectedSubjects(), attachments);
     
     if (success) {
       setNewPost('');
@@ -329,7 +329,8 @@ const Index = () => {
                     shares: post.shares_count || 0,
                     isCorrectAnswer: post.is_correct_answer || false,
                     user_liked: post.user_liked,
-                    user_id: post.user_id
+                    user_id: post.user_id,
+                    attachments: post.image_url ? [post.image_url] : []
                   }}
                   onLike={() => toggleLike(post.id)}
                   onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}

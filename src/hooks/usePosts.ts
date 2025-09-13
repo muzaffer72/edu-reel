@@ -96,7 +96,7 @@ export const usePosts = () => {
         .from('posts')
         .select(`
           *,
-          profiles (
+          profiles!posts_user_id_fkey (
             display_name,
             avatar_url
           )
@@ -136,20 +136,25 @@ export const usePosts = () => {
     }
   };
 
-  const createPost = async (content: string, examCategories: string[] = []) => {
+  const createPost = async (content: string, examCategories: string[] = [], attachments: string[] = []) => {
     if (!user) return;
 
     try {
+      const insertData: any = {
+        content,
+        exam_categories: examCategories,
+        user_id: user.id,
+        post_type: 'text'
+      };
+
+      // Add attachment URL if provided
+      if (attachments.length > 0) {
+        insertData.image_url = attachments[0]; // For now, just use the first attachment
+      }
+
       const { error } = await supabase
         .from('posts')
-        .insert([
-          {
-            content,
-            exam_categories: examCategories,
-            user_id: user.id,
-            post_type: 'text'
-          }
-        ]);
+        .insert([insertData]);
 
       if (error) throw error;
 
