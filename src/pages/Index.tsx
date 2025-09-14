@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
@@ -15,6 +15,7 @@ import { usePosts } from '@/hooks/usePosts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
@@ -31,6 +32,7 @@ const Index = () => {
   const [profile, setProfile] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [aiResponseEnabled, setAiResponseEnabled] = useState(false);
 
   const examCategories = {
     'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
@@ -125,11 +127,12 @@ const Index = () => {
     if (!newPost.trim()) return;
 
     setSubmitting(true);
-    const success = await createPost(newPost, getAllSelectedSubjects(), attachments);
+    const success = await createPost(newPost, getAllSelectedSubjects(), attachments, aiResponseEnabled);
     
     if (success) {
       setNewPost('');
       setAttachments([]);
+      setAiResponseEnabled(false);
     }
     setSubmitting(false);
   };
@@ -150,6 +153,26 @@ const Index = () => {
   if (showInterests) {
     return <InterestsSelection examCategories={examCategories} onComplete={handleInterestComplete} />;
   }
+
+  // Check if AI response should be available (only for text and image posts)
+  const hasVideoFiles = attachments.some(url => 
+    url.includes('/video/') || 
+    url.toLowerCase().includes('.mp4') || 
+    url.toLowerCase().includes('.webm') || 
+    url.toLowerCase().includes('.mov')
+  );
+  
+  const hasNonImageFiles = attachments.some(url => 
+    !url.includes('/images/') && 
+    !url.includes('/video/') &&
+    !url.toLowerCase().includes('.jpg') &&
+    !url.toLowerCase().includes('.jpeg') &&
+    !url.toLowerCase().includes('.png') &&
+    !url.toLowerCase().includes('.gif') &&
+    !url.toLowerCase().includes('.webp')
+  );
+
+  const canEnableAiResponse = !hasVideoFiles && !hasNonImageFiles;
 
   return (
     <div className="min-h-screen bg-background">
@@ -235,6 +258,26 @@ const Index = () => {
                     ))}
                   </div>
                 )}
+                
+                {/* AI Response Checkbox - only show for text and image posts */}
+                {canEnableAiResponse && (
+                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/50">
+                    <Checkbox 
+                      id="ai-response" 
+                      checked={aiResponseEnabled}
+                      onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    />
+                    <label 
+                      htmlFor="ai-response" 
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Bot className="w-4 h-4 text-primary" />
+                      Yapay zeka yanıt versin
+                    </label>
+                  </div>
+                )}
+                
                 
                 <div className="flex items-center justify-between">
                   <div className="flex space-x-2">

@@ -117,6 +117,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          ai_response_enabled: boolean | null
           comments_count: number | null
           content: string
           correct_comment_id: string | null
@@ -135,6 +136,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          ai_response_enabled?: boolean | null
           comments_count?: number | null
           content: string
           correct_comment_id?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          ai_response_enabled?: boolean | null
           comments_count?: number | null
           content?: string
           correct_comment_id?: string | null

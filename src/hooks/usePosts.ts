@@ -149,7 +149,7 @@ export const usePosts = () => {
     }
   };
 
-  const createPost = async (content: string, examCategories: string[] = [], attachments: string[] = []) => {
+  const createPost = async (content: string, examCategories: string[] = [], attachments: string[] = [], aiResponseEnabled: boolean = false) => {
     if (!user) return;
 
     try {
@@ -157,7 +157,8 @@ export const usePosts = () => {
         content,
         exam_categories: examCategories,
         user_id: user.id,
-        post_type: 'text'
+        post_type: 'text',
+        ai_response_enabled: aiResponseEnabled
       };
 
       // Handle different types of attachments
@@ -180,15 +181,35 @@ export const usePosts = () => {
         }
       }
 
-      const { error } = await supabase
+      const { data: postData, error } = await supabase
         .from('posts')
-        .insert([insertData]);
+        .insert([insertData])
+        .select()
+        .single();
 
       if (error) throw error;
 
+      // If AI response is enabled, trigger the AI response function
+      if (aiResponseEnabled && postData) {
+        try {
+          const imageUrl = insertData.image_url || null;
+          
+          await supabase.functions.invoke('ai-response', {
+            body: {
+              postId: postData.id,
+              content: content,
+              imageUrl: imageUrl
+            }
+          });
+        } catch (aiError) {
+          console.error('AI response error:', aiError);
+          // Don't fail the post creation if AI response fails
+        }
+      }
+
       toast({
         title: 'Başarılı',
-        description: 'Gönderi paylaşıldı',
+        description: aiResponseEnabled ? 'Gönderi paylaşıldı, AI yanıt hazırlanıyor...' : 'Gönderi paylaşıldı',
       });
 
       return true;
