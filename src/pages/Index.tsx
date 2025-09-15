@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings, ChevronDown } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings, ChevronDown, Filter, TrendingUp, Sparkles } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { NotificationDropdown } from '@/components/NotificationDropdown';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
@@ -268,49 +269,62 @@ const Index = () => {
   const canEnableAiResponse = !hasVideoFiles && !hasNonImageFiles;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border backdrop-blur-sm bg-opacity-90">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gradient-subtle">
+      {/* Modern Header */}
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50 shadow-elegant">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                EduSocial
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* Interest badges */}
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                  EduSocial
+                </h1>
+              </div>
+              
+              {/* Modern Category Pills */}
               <div className="hidden md:flex items-center space-x-2">
-                {Object.keys(selectedCategories).slice(0, 2).map((category) => (
-                  <Badge key={category} variant="secondary" className="text-xs">
-                    {category}
-                  </Badge>
+                {Object.keys(selectedCategories).slice(0, 3).map((category) => (
+                  <div key={category} className="group relative">
+                    <Badge 
+                      variant="secondary" 
+                      className="text-xs hover:bg-primary/10 transition-all duration-200 hover-scale"
+                    >
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      {category}
+                    </Badge>
+                  </div>
                 ))}
-                {Object.keys(selectedCategories).length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{Object.keys(selectedCategories).length - 2}
+                {Object.keys(selectedCategories).length > 3 && (
+                  <Badge variant="outline" className="text-xs hover:bg-muted/50 transition-colors">
+                    +{Object.keys(selectedCategories).length - 3} daha
                   </Badge>
                 )}
               </div>
-
-              {/* User menu */}
-              <div className="flex items-center space-x-2">
+            </div>
+            
+            {/* Modern Action Buttons */}
+            <div className="flex items-center space-x-2">
+              <NotificationDropdown />
+              
+              <div className="flex items-center space-x-1 bg-muted/30 rounded-lg p-1">
                 <Link to="/profile">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="hover:bg-background/80">
                     <User className="w-4 h-4 mr-1" />
                     Profil
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="hover:bg-background/80">
                       <Settings className="w-4 h-4 mr-1" />
                       Admin
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive">
                   <LogOut className="w-4 h-4 mr-1" />
                   Çıkış
                 </Button>
@@ -320,10 +334,10 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* New Post */}
-          <Card className="p-6 shadow-md border-0 bg-gradient-card">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Modern New Post Card */}
+          <Card className="p-6 shadow-elegant border-0 bg-gradient-card hover:shadow-glow transition-all duration-300 animate-fade-in">
             <div className="flex space-x-4">
               <Avatar>
                 {profile?.avatar_url ? (
@@ -464,54 +478,85 @@ const Index = () => {
             </div>
           </Card>
 
-          {/* Category Filter */}
-          <div className="flex items-center space-x-4 p-4 bg-card rounded-lg border">
-            <Label htmlFor="categoryFilter">Kategori Filtrele:</Label>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Kategori seç" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                {Object.entries(examCategories).map(([mainCat, subCats]) => (
-                  <div key={mainCat}>
-                    <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
-                      {mainCat}
-                    </div>
-                    {subCats.map((subCat) => (
-                      <SelectItem key={`filter-${mainCat}-${subCat}`} value={subCat}>
-                        {subCat}
-                      </SelectItem>
+          {/* Modern Category Filter */}
+          <Card className="p-4 border-0 bg-gradient-card shadow-elegant animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Filter className="w-5 h-5 text-primary" />
+                <Label htmlFor="categoryFilter" className="font-medium">Kategori Filtrele:</Label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48 border-border/50 hover:border-primary/50 transition-colors">
+                    <SelectValue placeholder="Kategori seç" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Tüm Kategoriler</span>
+                      </div>
+                    </SelectItem>
+                    {Object.entries(examCategories).map(([mainCat, subCats]) => (
+                      <div key={mainCat}>
+                        <div className="px-2 py-1 text-sm font-semibold text-primary bg-primary/5">
+                          {mainCat}
+                        </div>
+                        {subCats.map((subCat) => (
+                          <SelectItem key={`filter-${mainCat}-${subCat}`} value={subCat}>
+                            <div className="flex items-center space-x-2">
+                              <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                              <span>{subCat}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </div>
                     ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="text-sm text-muted-foreground">
-              {filteredPosts.length} gönderi bulundu
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                <span>{filteredPosts.length} gönderi</span>
+              </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Posts Feed */}
-          <div className="space-y-4">
+          {/* Modern Posts Feed */}
+          <div className="space-y-6">
             {loading ? (
-              <div className="text-center py-8">
-                <div className="text-muted-foreground">Gönderiler yükleniyor...</div>
+              <div className="text-center py-12">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="text-muted-foreground">Gönderiler yükleniyor...</div>
+                </div>
               </div>
             ) : filteredPosts.length === 0 ? (
-              <Card className="p-8 text-center">
-                <div className="text-muted-foreground">
-                  {categoryFilter === 'all' 
-                    ? 'Henüz gönderi bulunmuyor. İlk gönderiyi sen paylaş!'
-                    : `${categoryFilter} kategorisinde gönderi bulunmuyor.`
-                  }
+              <Card className="p-12 text-center border-0 bg-gradient-card shadow-elegant">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center">
+                    <MessageCircle className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-foreground">
+                      {categoryFilter === 'all' 
+                        ? 'Henüz gönderi bulunmuyor'
+                        : `${categoryFilter} kategorisinde gönderi bulunmuyor`
+                      }
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {categoryFilter === 'all' 
+                        ? 'İlk gönderiyi sen paylaş ve topluluğu büyütmeye başla!'
+                        : 'Bu kategoride ilk gönderiyi sen paylaş!'
+                      }
+                    </p>
+                  </div>
                 </div>
               </Card>
             ) : (
-              filteredPosts.map((post) => (
-                <PostCard 
-                  key={post.id} 
-                  post={{
+              <div className="space-y-6">
+                {filteredPosts.map((post, index) => (
+                <div key={post.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                  <PostCard
+                    post={{
                     id: post.id,
                     user: {
                       name: post.profiles?.display_name || 'Anonim Kullanıcı',
@@ -529,24 +574,31 @@ const Index = () => {
                     user_liked: post.user_liked,
                     user_id: post.user_id,
                     attachments: post.image_url ? [post.image_url] : []
-                  }}
-                  onLike={() => toggleLike(post.id)}
-                  onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}
-                  onEdit={() => handleEditPost(post)}
-                  onDelete={() => handleDeletePost(post.id)}
-                  currentUserId={user?.id}
-                />
-              ))
+                    }}
+                    onLike={() => toggleLike(post.id)}
+                    onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}
+                    onEdit={() => handleEditPost(post)}
+                    onDelete={() => handleDeletePost(post.id)}
+                    currentUserId={user?.id}
+                  />
+                </div>
+              ))}
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Edit Post Dialog */}
+      {/* Modern Edit Post Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Gönderiyi Düzenle</DialogTitle>
+        <DialogContent className="sm:max-w-md border-0 shadow-glow">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-gradient-primary rounded flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
+              <span>Gönderiyi Düzenle</span>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

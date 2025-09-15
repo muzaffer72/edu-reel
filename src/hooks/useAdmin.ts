@@ -92,21 +92,25 @@ export const useAdmin = () => {
         .from('admin_settings')
         .upsert({
           key,
-          value: JSON.stringify(value)
+          value
+        }, {
+          onConflict: 'key'
         });
 
       if (error) throw error;
 
-      setSettings(prev => prev ? { ...prev, [key]: value } : null);
+      // Update local state
+      setSettings(prev => prev ? { ...prev, [key]: value } : { [key]: value } as any);
       
       toast({
         title: 'Başarılı',
         description: 'Ayar güncellendi',
       });
     } catch (error: any) {
+      console.error('Setting update error:', error);
       toast({
         title: 'Hata',
-        description: 'Ayar güncellenemedi',
+        description: 'Ayar güncellenemedi: ' + error.message,
         variant: 'destructive',
       });
     }
@@ -253,16 +257,37 @@ export const useAdmin = () => {
     if (!isAdmin) return [];
 
     try {
-      const { data, error } = await supabase
+      // First get all profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles (role)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (profilesError) throw profilesError;
+
+      if (!profiles || profiles.length === 0) return [];
+
+      // Then get user roles for these users
+      const userIds = profiles.map(p => p.user_id);
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .in('user_id', userIds);
+
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+        // Return profiles without roles if role fetching fails
+        return profiles.map(profile => ({
+          ...profile,
+          user_roles: []
+        }));
+      }
+
+      // Combine profiles with their roles
+      return profiles.map(profile => ({
+        ...profile,
+        user_roles: roles ? roles.filter(role => role.user_id === profile.user_id) : []
+      }));
     } catch (error: any) {
       console.error('Error fetching users:', error);
       return [];
