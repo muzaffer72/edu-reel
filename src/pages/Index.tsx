@@ -198,55 +198,8 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
             </div>
           )}
           
-          {canEnableAiResponse && (
-            <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border border-primary/20">
-              <Checkbox 
-                id="ai-response" 
-                checked={aiResponseEnabled}
-                onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
-                className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-              />
-              <label 
-                htmlFor="ai-response" 
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
-              >
-                <Bot className="w-4 h-4 text-primary" />
-                Yapay zeka yanıt versin
-              </label>
-            </div>
-          )}
-
-          <div className="flex gap-4">
-            {canEnableAiResponse && (
-              <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg border border-primary/20 flex-1">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-response" 
-                          checked={aiResponseEnabled}
-                          onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                        />
-                        <label 
-                          htmlFor="ai-response" 
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
-                        >
-                          <Bot className="w-4 h-4 text-primary" />
-                          AI Yanıt
-                        </label>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Yapay zeka gönderinize otomatik yanıt verir</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-            
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 min-w-0">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -284,14 +237,43 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
                 </Tooltip>
               </TooltipProvider>
             </div>
+
+            {canEnableAiResponse && (
+              <div className="flex items-end">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg border border-primary/20">
+                        <Checkbox 
+                          id="ai-response" 
+                          checked={aiResponseEnabled}
+                          onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                        />
+                        <label 
+                          htmlFor="ai-response" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                        >
+                          <Bot className="w-4 h-4 text-primary" />
+                          AI Yanıt
+                        </label>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Yapay zeka gönderinize otomatik yanıt verir</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
               <label className="cursor-pointer">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full" asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full h-8 px-3 text-xs" asChild>
                   <span>
-                    <ImageIcon className="w-4 h-4 mr-2" />
+                    <ImageIcon className="w-3 h-3 mr-1" />
                     Resim
                   </span>
                 </Button>
@@ -305,9 +287,9 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
               </label>
               
               <label className="cursor-pointer">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary hover:bg-secondary/10 rounded-full" asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary hover:bg-secondary/10 rounded-full h-8 px-3 text-xs" asChild>
                   <span>
-                    <Video className="w-4 h-4 mr-2" />
+                    <Video className="w-3 h-3 mr-1" />
                     Video
                   </span>
                 </Button>
@@ -321,9 +303,9 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
               </label>
               
               <label className="cursor-pointer">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent-foreground hover:bg-accent/10 rounded-full" asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent-foreground hover:bg-accent/10 rounded-full h-8 px-3 text-xs" asChild>
                   <span>
-                    <Paperclip className="w-4 h-4 mr-2" />
+                    <Paperclip className="w-3 h-3 mr-1" />
                     Dosya
                   </span>
                 </Button>
@@ -339,7 +321,7 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
             <Button 
               onClick={handlePostSubmit}
               disabled={!newPost.trim() || !selectedPostCategory || submitting || uploading}
-              className="bg-gradient-primary hover:opacity-90 transition-all shadow-md hover:shadow-lg rounded-full px-6"
+              className="bg-gradient-primary hover:opacity-90 transition-all shadow-md hover:shadow-lg rounded-full px-6 h-8 text-sm"
             >
               {uploading ? 'Yükleniyor...' : submitting ? 'Paylaşılıyor...' : 'Paylaş'}
             </Button>
@@ -529,13 +511,13 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-background/95 via-background/98 to-accent/10 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 shadow-sm">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
-                <Sparkles className="h-5 w-5 text-white" />
+        <div className="container flex h-16 items-center justify-between px-4 mx-auto max-w-7xl">
+          <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow flex-shrink-0">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
                 Sınav Yardımcısı
               </h1>
             </div>
@@ -565,12 +547,12 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <NotificationDropdown />
             {user ? (
               <>
                 {isAdmin && (
-                  <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all" asChild>
+                  <Button variant="outline" size="sm" className="hidden sm:flex rounded-full shadow-sm hover:shadow-md transition-all" asChild>
                     <Link to="/admin">
                       <Settings className="h-4 w-4 mr-2" />
                       Admin
@@ -579,8 +561,8 @@ const Index = () => {
                 )}
                 <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all" asChild>
                   <Link to="/profile">
-                    <User className="h-4 w-4 mr-2" />
-                    Profil
+                    <User className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Profil</span>
                   </Link>
                 </Button>
                 <Button
@@ -589,8 +571,8 @@ const Index = () => {
                   className="rounded-full shadow-sm hover:shadow-md transition-all"
                   onClick={logout}
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Çıkış
+                  <LogOut className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Çıkış</span>
                 </Button>
               </>
             ) : (
@@ -607,12 +589,12 @@ const Index = () => {
 
       {/* Mobile Category Filter */}
       <div className="lg:hidden px-4 py-3 border-b bg-card/50 backdrop-blur-sm">
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex gap-2">
+        <ScrollArea className="w-full">
+          <div className="flex gap-2 pb-1">
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'ghost'}
               size="sm"
-              className="rounded-full transition-all hover:scale-105"
+              className="rounded-full transition-all hover:scale-105 flex-shrink-0"
               onClick={() => setSelectedCategory('all')}
             >
               Tümü
@@ -622,7 +604,7 @@ const Index = () => {
                 key={category}
                 variant={selectedCategory === category ? 'default' : 'ghost'}
                 size="sm"
-                className="rounded-full transition-all hover:scale-105"
+                className="rounded-full transition-all hover:scale-105 flex-shrink-0 whitespace-nowrap"
                 onClick={() => setSelectedCategory(category)}
               >
                 {category}
@@ -633,10 +615,10 @@ const Index = () => {
       </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Posts Column */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8 min-w-0">
             {user && (
               <div className="space-y-4">
                 <PostForm onPostAdded={handlePostAdded} />
@@ -649,7 +631,7 @@ const Index = () => {
               </div>
             )}
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {loading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto shadow-glow"></div>
@@ -659,7 +641,7 @@ const Index = () => {
                 <div className="text-center py-16 bg-gradient-card rounded-xl border">
                   <MessageSquare className="h-16 w-16 text-primary/60 mx-auto mb-6" />
                   <h3 className="text-xl font-semibold mb-2">Henüz gönderi yok</h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground px-4">
                     {selectedCategory === 'all' 
                       ? 'İlk gönderinizi oluşturun ve topluluğun bir parçası olun!'
                       : `${selectedCategory} kategorisinde henüz gönderi yok.`
@@ -686,7 +668,7 @@ const Index = () => {
                   };
                   
                   return (
-                    <div key={post.id} className="bg-gradient-card rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border backdrop-blur-sm">
+                    <div key={post.id} className="bg-gradient-card rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border backdrop-blur-sm overflow-hidden">
                       <PostCard 
                         post={transformedPost} 
                         currentUserId={user?.id}
@@ -699,11 +681,11 @@ const Index = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            <div className="bg-gradient-card rounded-xl shadow-lg border backdrop-blur-sm p-6">
+          <div className="space-y-6 min-w-0">
+            <div className="bg-gradient-card rounded-xl shadow-lg border backdrop-blur-sm p-4 sm:p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-primary" />
-                İlgi Alanlarınız
+                <GraduationCap className="w-5 h-5 text-primary flex-shrink-0" />
+                <span className="truncate">İlgi Alanlarınız</span>
               </h3>
               <div className="space-y-2">
                 {Object.keys(selectedCategories).length === 0 ? (
@@ -712,11 +694,11 @@ const Index = () => {
                   </p>
                 ) : (
                   Object.entries(selectedCategories).map(([mainCat, subCats]) => (
-                    <div key={mainCat}>
-                      <h4 className="font-medium text-sm text-primary">{mainCat}</h4>
+                    <div key={mainCat} className="min-w-0">
+                      <h4 className="font-medium text-sm text-primary truncate">{mainCat}</h4>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {subCats.map((subCat) => (
-                          <Badge key={subCat} variant="secondary" className="text-xs">
+                          <Badge key={subCat} variant="secondary" className="text-xs truncate max-w-full">
                             {subCat}
                           </Badge>
                         ))}
