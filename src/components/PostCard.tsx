@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import { Comments } from '@/components/Comments';
 
 interface Post {
@@ -33,13 +33,17 @@ interface PostCardProps {
   post: Post;
   onLike?: () => void;
   onToggleCorrectAnswer?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   currentUserId?: string;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ 
   post, 
   onLike, 
-  onToggleCorrectAnswer, 
+  onToggleCorrectAnswer,
+  onEdit,
+  onDelete,
   currentUserId 
 }) => {
   const isOwnPost = currentUserId === post.user_id;
@@ -128,17 +132,37 @@ export const PostCard: React.FC<PostCardProps> = ({
             
             <div className="flex items-center space-x-2">
               {isOwnPost && (
-                <button
-                  onClick={onToggleCorrectAnswer}
-                  className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                    post.isCorrectAnswer 
-                      ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-green-500/20 hover:text-green-700'
-                  }`}
-                >
-                  <CheckCircle className="w-3 h-3" />
-                  <span>{post.isCorrectAnswer ? 'Doğru Cevap' : 'Doğru İşaretle'}</span>
-                </button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onEdit}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Düzenle
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onDelete}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Sil
+                  </Button>
+                  <button
+                    onClick={onToggleCorrectAnswer}
+                    className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                      post.isCorrectAnswer 
+                        ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-green-500/20 hover:text-green-700'
+                    }`}
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    <span>{post.isCorrectAnswer ? 'Doğru Cevap' : 'Doğru İşaretle'}</span>
+                  </button>
+                </>
               )}
               {!isOwnPost && post.isCorrectAnswer && (
                 <div className="flex items-center space-x-1 bg-green-500/20 text-green-700 px-2 py-1 rounded-full">

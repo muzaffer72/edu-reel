@@ -8,6 +8,7 @@ export interface AdminSettings {
   app_logo: string | null;
   ai_enabled: boolean;
   ai_model: string;
+  ai_provider: string;
   max_posts_per_day: number;
   registration_enabled: boolean;
 }

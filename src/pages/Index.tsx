@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings, ChevronDown } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
@@ -24,7 +26,7 @@ interface SelectedCategories {
 
 const Index = () => {
   const { user, signOut } = useAuth();
-  const { posts, loading, createPost, toggleLike, toggleCorrectAnswer } = usePosts();
+  const { posts, loading, createPost, toggleLike, toggleCorrectAnswer, fetchPosts } = usePosts();
   const { isAdmin } = useAdmin();
   const { toast } = useToast();
   const { uploadFile, uploading } = useFileUpload();
@@ -35,6 +37,10 @@ const Index = () => {
   const [submitting, setSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [aiResponseEnabled, setAiResponseEnabled] = useState(false);
+  const [selectedPostCategory, setSelectedPostCategory] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const examCategories = {
     'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
@@ -126,17 +132,92 @@ const Index = () => {
   };
 
   const handlePostSubmit = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim() || !selectedPostCategory) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen gönderi içeriği ve kategori seçin',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setSubmitting(true);
-    const success = await createPost(newPost, getAllSelectedSubjects(), attachments, aiResponseEnabled);
+    const success = await createPost(newPost, [selectedPostCategory], attachments, aiResponseEnabled);
     
     if (success) {
       setNewPost('');
       setAttachments([]);
       setAiResponseEnabled(false);
+      setSelectedPostCategory('');
     }
     setSubmitting(false);
+  };
+
+  const handleEditPost = (post: any) => {
+    setEditingPost(post);
+    setNewPost(post.content);
+    setSelectedPostCategory(post.exam_categories?.[0] || '');
+    setShowEditDialog(true);
+  };
+
+  const handleUpdatePost = async () => {
+    if (!editingPost || !newPost.trim() || !selectedPostCategory) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({
+          content: newPost,
+          exam_categories: [selectedPostCategory],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingPost.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Başarılı',
+        description: 'Gönderi güncellendi',
+      });
+
+      setShowEditDialog(false);
+      setEditingPost(null);
+      setNewPost('');
+      setSelectedPostCategory('');
+      fetchPosts();
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: 'Gönderi güncellenemedi',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Başarılı',
+        description: 'Gönderi silindi',
+      });
+
+      fetchPosts();
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: 'Gönderi silinemedi',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getInitials = (name: string) => {
@@ -151,6 +232,15 @@ const Index = () => {
     });
     return subjects;
   };
+
+  // Filter posts by category
+  const filteredPosts = categoryFilter === 'all' 
+    ? posts 
+    : posts.filter(post => 
+        post.exam_categories?.some(cat => 
+          cat.toLowerCase().includes(categoryFilter.toLowerCase())
+        )
+      );
 
   if (showInterests) {
     return <InterestsSelection examCategories={examCategories} onComplete={handleInterestComplete} />;
@@ -287,7 +377,30 @@ const Index = () => {
                     </label>
                   </div>
                 )}
-                
+
+                {/* Category Selection for Post */}
+                <div className="space-y-2">
+                  <Label htmlFor="postCategory">Kategori Seçin</Label>
+                  <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Gönderi kategorisi seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(examCategories).map(([mainCat, subCats]) => (
+                        <div key={mainCat}>
+                          <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
+                            {mainCat}
+                          </div>
+                          {subCats.map((subCat) => (
+                            <SelectItem key={`${mainCat}-${subCat}`} value={subCat}>
+                              {subCat}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex space-x-2">
@@ -340,7 +453,7 @@ const Index = () => {
                   </div>
                   <Button 
                     onClick={handlePostSubmit}
-                    disabled={!newPost.trim() || submitting || uploading}
+                    disabled={!newPost.trim() || !selectedPostCategory || submitting || uploading}
                     className="bg-gradient-primary hover:opacity-90 transition-all shadow-glow"
                   >
                     {uploading ? 'Yükleniyor...' : submitting ? 'Paylaşılıyor...' : 'Paylaş'}
@@ -350,20 +463,51 @@ const Index = () => {
             </div>
           </Card>
 
+          {/* Category Filter */}
+          <div className="flex items-center space-x-4 p-4 bg-card rounded-lg border">
+            <Label htmlFor="categoryFilter">Kategori Filtrele:</Label>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Kategori seç" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                {Object.entries(examCategories).map(([mainCat, subCats]) => (
+                  <div key={mainCat}>
+                    <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
+                      {mainCat}
+                    </div>
+                    {subCats.map((subCat) => (
+                      <SelectItem key={`filter-${mainCat}-${subCat}`} value={subCat}>
+                        {subCat}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground">
+              {filteredPosts.length} gönderi bulundu
+            </div>
+          </div>
+
           {/* Posts Feed */}
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-8">
                 <div className="text-muted-foreground">Gönderiler yükleniyor...</div>
               </div>
-            ) : posts.length === 0 ? (
+            ) : filteredPosts.length === 0 ? (
               <Card className="p-8 text-center">
                 <div className="text-muted-foreground">
-                  Henüz gönderi bulunmuyor. İlk gönderiyi sen paylaş!
+                  {categoryFilter === 'all' 
+                    ? 'Henüz gönderi bulunmuyor. İlk gönderiyi sen paylaş!'
+                    : `${categoryFilter} kategorisinde gönderi bulunmuyor.`
+                  }
                 </div>
               </Card>
             ) : (
-              posts.map((post) => (
+              filteredPosts.map((post) => (
                 <PostCard 
                   key={post.id} 
                   post={{
@@ -387,6 +531,8 @@ const Index = () => {
                   }}
                   onLike={() => toggleLike(post.id)}
                   onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}
+                  onEdit={() => handleEditPost(post)}
+                  onDelete={() => handleDeletePost(post.id)}
                   currentUserId={user?.id}
                 />
               ))
@@ -394,6 +540,57 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gönderiyi Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editContent">İçerik</Label>
+              <Textarea
+                id="editContent"
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                placeholder="Gönderi içeriği..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editCategory">Kategori</Label>
+              <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(examCategories).map(([mainCat, subCats]) => (
+                    <div key={mainCat}>
+                      <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
+                        {mainCat}
+                      </div>
+                      {subCats.map((subCat) => (
+                        <SelectItem key={`edit-${mainCat}-${subCat}`} value={subCat}>
+                          {subCat}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              İptal
+            </Button>
+            <Button onClick={handleUpdatePost} disabled={!newPost.trim() || !selectedPostCategory}>
+              Güncelle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
