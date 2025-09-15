@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings, ChevronDown, Filter, TrendingUp, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, LogIn, Paperclip, X, Bot, Settings, ChevronDown, Filter, TrendingUp, Sparkles, MessageSquare, GraduationCap } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
@@ -21,40 +21,270 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
 }
 
-const Index = () => {
-  const { user, signOut } = useAuth();
-  const { posts, loading, createPost, toggleLike, toggleCorrectAnswer, fetchPosts } = usePosts();
-  const { isAdmin } = useAdmin();
+const examCategories = {
+  'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
+  'TYT': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Fizik', 'Kimya', 'Biyoloji'],
+  'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1', 'Felsefe'],
+  'DGS': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
+  'ALES': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
+  'YÖKDİL': ['İngilizce', 'Almanca', 'Fransızca', 'Rusça', 'Arapça'],
+  'Öğretmenlik (KPSS)': ['ÖABT Matematik', 'ÖABT Türkçe', 'ÖABT Fen', 'ÖABT Sosyal', 'Eğitim Bilimleri', 'Genel Kültür'],
+  'MSÜ': ['Matematik', 'Fizik', 'Kimya', 'Türkçe', 'Tarih', 'Coğrafya'],
+  'PMYO': ['Matematik', 'Türkçe', 'Genel Kültür', 'IQ-Mantık']
+};
+
+const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
+  const { user } = useAuth();
+  const { createPost } = usePosts();
   const { toast } = useToast();
   const { uploadFile, uploading } = useFileUpload();
-  const [showInterests, setShowInterests] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
+  
   const [newPost, setNewPost] = useState('');
-  const [profile, setProfile] = useState<any>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [aiResponseEnabled, setAiResponseEnabled] = useState(false);
   const [selectedPostCategory, setSelectedPostCategory] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [editingPost, setEditingPost] = useState<any>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
-  const examCategories = {
-    'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
-    'TYT': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Fizik', 'Kimya', 'Biyoloji'],
-    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1', 'Felsefe'],
-    'DGS': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
-    'ALES': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
-    'YÖKDİL': ['İngilizce', 'Almanca', 'Fransızca', 'Rusça', 'Arapça'],
-    'Öğretmenlik (KPSS)': ['ÖABT Matematik', 'ÖABT Türkçe', 'ÖABT Fen', 'ÖABT Sosyal', 'Eğitim Bilimleri', 'Genel Kültür'],
-    'MSÜ': ['Matematik', 'Fizik', 'Kimya', 'Türkçe', 'Tarih', 'Coğrafya'],
-    'PMYO': ['Matematik', 'Türkçe', 'Genel Kültür', 'IQ-Mantık']
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) setProfile(data);
+    } catch (error: any) {
+      console.error('Profile fetch error:', error);
+    }
   };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const bucket = 'attachments';
+    const url = await uploadFile(file, bucket);
+    
+    if (url) {
+      setAttachments(prev => [...prev, url]);
+    }
+    
+    event.target.value = '';
+  };
+
+  const handlePostSubmit = async () => {
+    if (!newPost.trim() || !selectedPostCategory) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen gönderi içeriği ve kategori seçin',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    const success = await createPost(newPost, [selectedPostCategory], attachments, aiResponseEnabled);
+    
+    if (success) {
+      setNewPost('');
+      setAttachments([]);
+      setAiResponseEnabled(false);
+      setSelectedPostCategory('');
+      onPostAdded();
+    }
+    setSubmitting(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const hasVideoFiles = attachments.some(url => 
+    url.includes('/video/') || 
+    url.toLowerCase().includes('.mp4') || 
+    url.toLowerCase().includes('.webm') || 
+    url.toLowerCase().includes('.mov')
+  );
+  
+  const hasNonImageFiles = attachments.some(url => 
+    !url.includes('/images/') && 
+    !url.includes('/video/') &&
+    !url.toLowerCase().includes('.jpg') &&
+    !url.toLowerCase().includes('.jpeg') &&
+    !url.toLowerCase().includes('.png') &&
+    !url.toLowerCase().includes('.gif') &&
+    !url.toLowerCase().includes('.webp')
+  );
+
+  const canEnableAiResponse = !hasVideoFiles && !hasNonImageFiles;
+
+  return (
+    <Card className="p-6 shadow-lg border-0 bg-gradient-card hover:shadow-glow transition-all duration-300">
+      <div className="flex space-x-4">
+        <Avatar className="ring-2 ring-primary/20">
+          {profile?.avatar_url ? (
+            <AvatarImage src={profile.avatar_url} alt="Profil fotoğrafı" />
+          ) : (
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {profile?.display_name ? getInitials(profile.display_name) : 'U'}
+            </AvatarFallback>
+          )}
+        </Avatar>
+        <div className="flex-1 space-y-4">
+          <Textarea
+            placeholder="Bir soru sor veya bilgini paylaş..."
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            className="min-h-[100px] border-0 bg-transparent resize-none focus-visible:ring-0 placeholder:text-muted-foreground text-base"
+          />
+          
+          {attachments.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {attachments.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img src={url} alt="Ek" className="w-full h-32 object-cover rounded-lg shadow-md" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {canEnableAiResponse && (
+            <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border border-primary/20">
+              <Checkbox 
+                id="ai-response" 
+                checked={aiResponseEnabled}
+                onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
+                className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              />
+              <label 
+                htmlFor="ai-response" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+              >
+                <Bot className="w-4 h-4 text-primary" />
+                Yapay zeka yanıt versin
+              </label>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="postCategory" className="text-sm font-medium">Kategori Seçin</Label>
+            <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
+              <SelectTrigger className="border-border/50 hover:border-primary/50 transition-colors">
+                <SelectValue placeholder="Gönderi kategorisi seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(examCategories).map(([mainCat, subCats]) => (
+                  <div key={mainCat}>
+                    <div className="px-2 py-1 text-sm font-semibold text-primary">
+                      {mainCat}
+                    </div>
+                    {subCats.map((subCat) => (
+                      <SelectItem key={`${mainCat}-${subCat}`} value={subCat}>
+                        {subCat}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-2">
+              <label className="cursor-pointer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full" asChild>
+                  <span>
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Resim
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, 'image')}
+                  disabled={uploading}
+                />
+              </label>
+              
+              <label className="cursor-pointer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary hover:bg-secondary/10 rounded-full" asChild>
+                  <span>
+                    <Video className="w-4 h-4 mr-2" />
+                    Video
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, 'video')}
+                  disabled={uploading}
+                />
+              </label>
+              
+              <label className="cursor-pointer">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent-foreground hover:bg-accent/10 rounded-full" asChild>
+                  <span>
+                    <Paperclip className="w-4 h-4 mr-2" />
+                    Dosya
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, 'file')}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+            
+            <Button 
+              onClick={handlePostSubmit}
+              disabled={!newPost.trim() || !selectedPostCategory || submitting || uploading}
+              className="bg-gradient-primary hover:opacity-90 transition-all shadow-md hover:shadow-lg rounded-full px-6"
+            >
+              {uploading ? 'Yükleniyor...' : submitting ? 'Paylaşılıyor...' : 'Paylaş'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const Index = () => {
+  const { user, signOut } = useAuth();
+  const { posts, loading, fetchPosts } = usePosts();
+  const { isAdmin } = useAdmin();
+  const { toast } = useToast();
+  const [showInterests, setShowInterests] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
+  const [profile, setProfile] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
@@ -74,11 +304,11 @@ const Index = () => {
 
       if (data) {
         setProfile(data);
-      if (data.exam_categories && Object.keys(data.exam_categories).length > 0) {
-        setSelectedCategories(data.exam_categories as SelectedCategories);
-      } else {
-        setShowInterests(true);
-      }
+        if (data.exam_categories && Object.keys(data.exam_categories).length > 0) {
+          setSelectedCategories(data.exam_categories as SelectedCategories);
+        } else {
+          setShowInterests(true);
+        }
       } else {
         setShowInterests(true);
       }
@@ -87,7 +317,6 @@ const Index = () => {
       setShowInterests(true);
     }
   };
-
 
   const handleInterestComplete = async (selected: SelectedCategories) => {
     try {
@@ -114,133 +343,26 @@ const Index = () => {
     }
   };
 
-  const handleLogout = async () => {
+  const logout = async () => {
     await signOut();
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const bucket = type === 'image' || type === 'video' ? 'attachments' : 'attachments';
-    const url = await uploadFile(file, bucket);
-    
-    if (url) {
-      setAttachments(prev => [...prev, url]);
-    }
-    
-    // Reset input
-    event.target.value = '';
+  const handlePostAdded = () => {
+    fetchPosts();
   };
 
-  const handlePostSubmit = async () => {
-    if (!newPost.trim() || !selectedPostCategory) {
-      toast({
-        title: 'Hata',
-        description: 'Lütfen gönderi içeriği ve kategori seçin',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    const success = await createPost(newPost, [selectedPostCategory], attachments, aiResponseEnabled);
-    
-    if (success) {
-      setNewPost('');
-      setAttachments([]);
-      setAiResponseEnabled(false);
-      setSelectedPostCategory('');
-    }
-    setSubmitting(false);
+  const handlePostUpdated = () => {
+    fetchPosts();
   };
 
-  const handleEditPost = (post: any) => {
-    setEditingPost(post);
-    setNewPost(post.content);
-    setSelectedPostCategory(post.exam_categories?.[0] || '');
-    setShowEditDialog(true);
-  };
-
-  const handleUpdatePost = async () => {
-    if (!editingPost || !newPost.trim() || !selectedPostCategory) return;
-
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .update({
-          content: newPost,
-          exam_categories: [selectedPostCategory],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingPost.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Başarılı',
-        description: 'Gönderi güncellendi',
-      });
-
-      setShowEditDialog(false);
-      setEditingPost(null);
-      setNewPost('');
-      setSelectedPostCategory('');
-      fetchPosts();
-    } catch (error: any) {
-      toast({
-        title: 'Hata',
-        description: 'Gönderi güncellenemedi',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    if (!window.confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', postId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Başarılı',
-        description: 'Gönderi silindi',
-      });
-
-      fetchPosts();
-    } catch (error: any) {
-      toast({
-        title: 'Hata',
-        description: 'Gönderi silinemedi',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
-  // Seçilen tüm kategorileri düz liste olarak al
-  const getAllSelectedSubjects = () => {
-    const subjects: string[] = [];
-    Object.entries(selectedCategories).forEach(([mainCat, subCats]) => {
-      subjects.push(...subCats);
-    });
-    return subjects;
-  };
+  const categories = Object.keys(examCategories);
 
   // Filter posts by category
-  const filteredPosts = categoryFilter === 'all' 
+  const filteredPosts = selectedCategory === 'all' 
     ? posts 
     : posts.filter(post => 
         post.exam_categories?.some(cat => 
-          cat.toLowerCase().includes(categoryFilter.toLowerCase())
+          cat.toLowerCase().includes(selectedCategory.toLowerCase())
         )
       );
 
@@ -248,402 +370,202 @@ const Index = () => {
     return <InterestsSelection examCategories={examCategories} onComplete={handleInterestComplete} />;
   }
 
-  // Check if AI response should be available (only for text and image posts)
-  const hasVideoFiles = attachments.some(url => 
-    url.includes('/video/') || 
-    url.toLowerCase().includes('.mp4') || 
-    url.toLowerCase().includes('.webm') || 
-    url.toLowerCase().includes('.mov')
-  );
-  
-  const hasNonImageFiles = attachments.some(url => 
-    !url.includes('/images/') && 
-    !url.includes('/video/') &&
-    !url.toLowerCase().includes('.jpg') &&
-    !url.toLowerCase().includes('.jpeg') &&
-    !url.toLowerCase().includes('.png') &&
-    !url.toLowerCase().includes('.gif') &&
-    !url.toLowerCase().includes('.webp')
-  );
-
-  const canEnableAiResponse = !hasVideoFiles && !hasNonImageFiles;
-
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Modern Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50 shadow-elegant">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  EduSocial
-                </h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-background/95 via-background/98 to-accent/10 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 shadow-sm">
+        <div className="container flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
+                <Sparkles className="h-5 w-5 text-white" />
               </div>
-              
-              {/* Modern Category Pills */}
-              <div className="hidden md:flex items-center space-x-2">
-                {Object.keys(selectedCategories).slice(0, 3).map((category) => (
-                  <div key={category} className="group relative">
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs hover:bg-primary/10 transition-all duration-200 hover-scale"
-                    >
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      {category}
-                    </Badge>
-                  </div>
-                ))}
-                {Object.keys(selectedCategories).length > 3 && (
-                  <Badge variant="outline" className="text-xs hover:bg-muted/50 transition-colors">
-                    +{Object.keys(selectedCategories).length - 3} daha
-                  </Badge>
-                )}
-              </div>
+              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Sınav Yardımcısı
+              </h1>
             </div>
             
-            {/* Modern Action Buttons */}
-            <div className="flex items-center space-x-2">
-              <NotificationDropdown />
-              
-              <div className="flex items-center space-x-1 bg-muted/30 rounded-lg p-1">
-                <Link to="/profile">
-                  <Button variant="ghost" size="sm" className="hover:bg-background/80">
-                    <User className="w-4 h-4 mr-1" />
-                    Profil
-                  </Button>
-                </Link>
+            <div className="hidden lg:flex items-center gap-2">
+              <Button
+                variant={selectedCategory === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-full transition-all hover:scale-105 shadow-sm"
+                onClick={() => setSelectedCategory('all')}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Tümü
+              </Button>
+              {categories.slice(0, 4).map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? 'default' : 'ghost'}
+                  size="sm"
+                  className="rounded-full transition-all hover:scale-105 shadow-sm"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  {category}
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <NotificationDropdown />
+            {user ? (
+              <>
                 {isAdmin && (
-                  <Link to="/admin">
-                    <Button variant="ghost" size="sm" className="hover:bg-background/80">
-                      <Settings className="w-4 h-4 mr-1" />
+                  <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all" asChild>
+                    <Link to="/admin">
+                      <Settings className="h-4 w-4 mr-2" />
                       Admin
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive">
-                  <LogOut className="w-4 h-4 mr-1" />
+                <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all" asChild>
+                  <Link to="/profile">
+                    <User className="h-4 w-4 mr-2" />
+                    Profil
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full shadow-sm hover:shadow-md transition-all"
+                  onClick={logout}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
                   Çıkış
                 </Button>
-              </div>
-            </div>
+              </>
+            ) : (
+              <Button variant="default" size="sm" className="rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105" asChild>
+                <Link to="/auth">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Giriş Yap
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Modern New Post Card */}
-          <Card className="p-6 shadow-elegant border-0 bg-gradient-card hover:shadow-glow transition-all duration-300 animate-fade-in">
-            <div className="flex space-x-4">
-              <Avatar>
-                {profile?.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt="Profil fotoğrafı" />
-                ) : (
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {profile?.display_name ? getInitials(profile.display_name) : 'U'}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex-1 space-y-4">
-                <Textarea
-                  placeholder="Bir soru sor veya bilgini paylaş..."
-                  value={newPost}
-                  onChange={(e) => setNewPost(e.target.value)}
-                  className="min-h-[100px] border-0 bg-transparent resize-none focus-visible:ring-0 placeholder:text-muted-foreground"
-                />
-                {/* Attachments Preview */}
-                {attachments.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {attachments.map((url, index) => (
-                      <div key={index} className="relative">
-                        <img src={url} alt="Ek" className="w-full h-32 object-cover rounded" />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70"
-                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* AI Response Checkbox - only show for text and image posts */}
-                {canEnableAiResponse && (
-                  <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg border border-border/50">
-                    <Checkbox 
-                      id="ai-response" 
-                      checked={aiResponseEnabled}
-                      onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
-                      className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                    />
-                    <label 
-                      htmlFor="ai-response" 
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Bot className="w-4 h-4 text-primary" />
-                      Yapay zeka yanıt versin
-                    </label>
-                  </div>
-                )}
+      {/* Mobile Category Filter */}
+      <div className="lg:hidden px-4 py-3 border-b bg-card/50 backdrop-blur-sm">
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-2">
+            <Button
+              variant={selectedCategory === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-full transition-all hover:scale-105"
+              onClick={() => setSelectedCategory('all')}
+            >
+              Tümü
+            </Button>
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-full transition-all hover:scale-105"
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
 
-                {/* Category Selection for Post */}
-                <div className="space-y-2">
-                  <Label htmlFor="postCategory">Kategori Seçin</Label>
-                  <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Gönderi kategorisi seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(examCategories).map(([mainCat, subCats]) => (
-                        <div key={mainCat}>
-                          <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
-                            {mainCat}
-                          </div>
-                          {subCats.map((subCat) => (
-                            <SelectItem key={`${mainCat}-${subCat}`} value={subCat}>
-                              {subCat}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Posts Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {user && (
+              <PostForm onPostAdded={handlePostAdded} />
+            )}
+            
+            <div className="space-y-6">
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto shadow-glow"></div>
+                  <p className="text-muted-foreground mt-4 text-lg">Gönderiler yükleniyor...</p>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
-                    <label className="cursor-pointer">
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" asChild>
-                        <span>
-                          <ImageIcon className="w-4 h-4 mr-2" />
-                          Resim
-                        </span>
-                      </Button>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'image')}
-                        disabled={uploading}
-                      />
-                    </label>
-                    
-                    <label className="cursor-pointer">
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-secondary" asChild>
-                        <span>
-                          <Video className="w-4 h-4 mr-2" />
-                          Video
-                        </span>
-                      </Button>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'video')}
-                        disabled={uploading}
-                      />
-                    </label>
-                    
-                    <label className="cursor-pointer">
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent" asChild>
-                        <span>
-                          <Paperclip className="w-4 h-4 mr-2" />
-                          Dosya
-                        </span>
-                      </Button>
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, 'file')}
-                        disabled={uploading}
-                      />
-                    </label>
-                  </div>
-                  <Button 
-                    onClick={handlePostSubmit}
-                    disabled={!newPost.trim() || !selectedPostCategory || submitting || uploading}
-                    className="bg-gradient-primary hover:opacity-90 transition-all shadow-glow"
-                  >
-                    {uploading ? 'Yükleniyor...' : submitting ? 'Paylaşılıyor...' : 'Paylaş'}
-                  </Button>
+              ) : filteredPosts.length === 0 ? (
+                <div className="text-center py-16 bg-gradient-card rounded-xl border">
+                  <MessageSquare className="h-16 w-16 text-primary/60 mx-auto mb-6" />
+                  <h3 className="text-xl font-semibold mb-2">Henüz gönderi yok</h3>
+                  <p className="text-muted-foreground">
+                    {selectedCategory === 'all' 
+                      ? 'İlk gönderinizi oluşturun ve topluluğun bir parçası olun!'
+                      : `${selectedCategory} kategorisinde henüz gönderi yok.`
+                    }
+                  </p>
                 </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Modern Category Filter */}
-          <Card className="p-4 border-0 bg-gradient-card shadow-elegant animate-fade-in">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Filter className="w-5 h-5 text-primary" />
-                <Label htmlFor="categoryFilter" className="font-medium">Kategori Filtrele:</Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48 border-border/50 hover:border-primary/50 transition-colors">
-                    <SelectValue placeholder="Kategori seç" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      <div className="flex items-center space-x-2">
-                        <Sparkles className="w-3 h-3" />
-                        <span>Tüm Kategoriler</span>
-                      </div>
-                    </SelectItem>
-                    {Object.entries(examCategories).map(([mainCat, subCats]) => (
-                      <div key={mainCat}>
-                        <div className="px-2 py-1 text-sm font-semibold text-primary bg-primary/5">
-                          {mainCat}
-                        </div>
-                        {subCats.map((subCat) => (
-                          <SelectItem key={`filter-${mainCat}-${subCat}`} value={subCat}>
-                            <div className="flex items-center space-x-2">
-                              <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                              <span>{subCat}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <span>{filteredPosts.length} gönderi</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Modern Posts Feed */}
-          <div className="space-y-6">
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <div className="text-muted-foreground">Gönderiler yükleniyor...</div>
-                </div>
-              </div>
-            ) : filteredPosts.length === 0 ? (
-              <Card className="p-12 text-center border-0 bg-gradient-card shadow-elegant">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-foreground">
-                      {categoryFilter === 'all' 
-                        ? 'Henüz gönderi bulunmuyor'
-                        : `${categoryFilter} kategorisinde gönderi bulunmuyor`
-                      }
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {categoryFilter === 'all' 
-                        ? 'İlk gönderiyi sen paylaş ve topluluğu büyütmeye başla!'
-                        : 'Bu kategoride ilk gönderiyi sen paylaş!'
-                      }
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                {filteredPosts.map((post, index) => (
-                <div key={post.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                  <PostCard
-                    post={{
-                    id: post.id,
+              ) : (
+                filteredPosts.map((post) => {
+                  // Transform post data to match PostCard interface
+                  const transformedPost = {
+                    ...post,
                     user: {
-                      name: post.profiles?.display_name || 'Anonim Kullanıcı',
-                      username: '',
-                      avatar: getInitials(post.profiles?.display_name || 'A'),
-                      avatar_url: post.profiles?.avatar_url || undefined
+                      name: post.profiles?.display_name || 'Anonim',
+                      username: post.profiles?.display_name || 'user',
+                      avatar: post.profiles?.avatar_url || '',
+                      avatar_url: post.profiles?.avatar_url
                     },
-                    content: post.content,
-                    timestamp: new Date(post.created_at).toLocaleString('tr-TR'),
+                    timestamp: post.created_at,
                     interests: post.exam_categories || [],
                     likes: post.likes_count || 0,
                     comments: post.comments_count || 0,
                     shares: post.shares_count || 0,
-                    isCorrectAnswer: post.is_correct_answer || false,
-                    user_liked: post.user_liked,
-                    user_id: post.user_id,
-                    attachments: post.image_url ? [post.image_url] : []
-                    }}
-                    onLike={() => toggleLike(post.id)}
-                    onToggleCorrectAnswer={() => toggleCorrectAnswer(post.id)}
-                    onEdit={() => handleEditPost(post)}
-                    onDelete={() => handleDeletePost(post.id)}
-                    currentUserId={user?.id}
-                  />
-                </div>
-              ))}
+                    isCorrectAnswer: post.is_correct_answer || false
+                  };
+                  
+                  return (
+                    <div key={post.id} className="bg-gradient-card rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border backdrop-blur-sm">
+                      <PostCard 
+                        post={transformedPost} 
+                        currentUserId={user?.id}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-gradient-card rounded-xl shadow-lg border backdrop-blur-sm p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-primary" />
+                İlgi Alanlarınız
+              </h3>
+              <div className="space-y-2">
+                {Object.keys(selectedCategories).length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    Henüz ilgi alanı seçmediniz
+                  </p>
+                ) : (
+                  Object.entries(selectedCategories).map(([mainCat, subCats]) => (
+                    <div key={mainCat}>
+                      <h4 className="font-medium text-sm text-primary">{mainCat}</h4>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {subCats.map((subCat) => (
+                          <Badge key={subCat} variant="secondary" className="text-xs">
+                            {subCat}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Modern Edit Post Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md border-0 shadow-glow">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-primary rounded flex items-center justify-center">
-                <Sparkles className="w-3 h-3 text-white" />
-              </div>
-              <span>Gönderiyi Düzenle</span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editContent">İçerik</Label>
-              <Textarea
-                id="editContent"
-                value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
-                placeholder="Gönderi içeriği..."
-                className="min-h-[100px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editCategory">Kategori</Label>
-              <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Kategori seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(examCategories).map(([mainCat, subCats]) => (
-                    <div key={mainCat}>
-                      <div className="px-2 py-1 text-sm font-semibold text-muted-foreground">
-                        {mainCat}
-                      </div>
-                      {subCats.map((subCat) => (
-                        <SelectItem key={`edit-${mainCat}-${subCat}`} value={subCat}>
-                          {subCat}
-                        </SelectItem>
-                      ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              İptal
-            </Button>
-            <Button onClick={handleUpdatePost} disabled={!newPost.trim() || !selectedPostCategory}>
-              Güncelle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </main>
     </div>
   );
 };

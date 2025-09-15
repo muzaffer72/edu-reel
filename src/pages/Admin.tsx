@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Users, MessageSquare, Shield, Upload, Image, RefreshCw } from 'lucide-react';
+import { Settings, Users, MessageSquare, Shield, Upload, Image, RefreshCw, Key } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Admin = () => {
@@ -28,6 +28,8 @@ const Admin = () => {
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [maxPostsPerDay, setMaxPostsPerDay] = useState(50);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -45,6 +47,8 @@ const Admin = () => {
       setAiProvider(settings.ai_provider || 'google');
       setMaxPostsPerDay(settings.max_posts_per_day || 50);
       setRegistrationEnabled(settings.registration_enabled || true);
+      setOpenaiApiKey(settings.openai_api_key || '');
+      setGeminiApiKey(settings.gemini_api_key || '');
     }
   }, [settings]);
 
@@ -119,6 +123,8 @@ const Admin = () => {
     await updateSetting('ai_provider', aiProvider);
     await updateSetting('max_posts_per_day', maxPostsPerDay);
     await updateSetting('registration_enabled', registrationEnabled);
+    await updateSetting('openai_api_key', openaiApiKey);
+    await updateSetting('gemini_api_key', geminiApiKey);
   };
 
   const handleSendNotification = async () => {
@@ -166,10 +172,14 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Ayarlar
+          </TabsTrigger>
+          <TabsTrigger value="api" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            API Keys
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -305,6 +315,50 @@ const Admin = () => {
 
               <Button onClick={handleSaveSettings} className="w-full">
                 Ayarları Kaydet
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api">
+          <Card>
+            <CardHeader>
+              <CardTitle>API Anahtarları</CardTitle>
+              <CardDescription>
+                AI sağlayıcılarının API anahtarlarını yönetin
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="openaiKey">OpenAI API Anahtarı</Label>
+                <Input
+                  id="openaiKey"
+                  type="password"
+                  value={openaiApiKey}
+                  onChange={(e) => setOpenaiApiKey(e.target.value)}
+                  placeholder="sk-..."
+                />
+                <p className="text-sm text-muted-foreground">
+                  GPT modelleri için gerekli
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="geminiKey">Google Gemini API Anahtarı</Label>
+                <Input
+                  id="geminiKey"
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="AIza..."
+                />
+                <p className="text-sm text-muted-foreground">
+                  Gemini modelleri için gerekli
+                </p>
+              </div>
+
+              <Button onClick={handleSaveSettings} className="w-full">
+                API Anahtarlarını Kaydet
               </Button>
             </CardContent>
           </Card>

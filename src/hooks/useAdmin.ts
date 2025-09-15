@@ -11,6 +11,8 @@ export interface AdminSettings {
   ai_provider: string;
   max_posts_per_day: number;
   registration_enabled: boolean;
+  openai_api_key: string;
+  gemini_api_key: string;
 }
 
 export interface UserRole {
