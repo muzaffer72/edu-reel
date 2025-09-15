@@ -22,22 +22,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PostFilter } from '@/components/PostFilter';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SelectedCategories {
   [mainCategory: string]: string[];
 }
 
-const examCategories = {
-  'KPSS': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Genel Kültür', 'Anayasa'],
-  'TYT': ['Matematik', 'Geometri', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Fizik', 'Kimya', 'Biyoloji'],
-  'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1', 'Felsefe'],
-  'DGS': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
-  'ALES': ['Matematik', 'Türkçe', 'Sözel Mantık', 'Sayısal Mantık'],
-  'YÖKDİL': ['İngilizce', 'Almanca', 'Fransızca', 'Rusça', 'Arapça'],
-  'Öğretmenlik (KPSS)': ['ÖABT Matematik', 'ÖABT Türkçe', 'ÖABT Fen', 'ÖABT Sosyal', 'Eğitim Bilimleri', 'Genel Kültür'],
-  'MSÜ': ['Matematik', 'Fizik', 'Kimya', 'Türkçe', 'Tarih', 'Coğrafya'],
-  'PMYO': ['Matematik', 'Türkçe', 'Genel Kültür', 'IQ-Mantık']
-};
+interface ExamCategory {
+  id: string;
+  main_category: string;
+  sub_category: string;
+}
+
+interface FilterOptions {
+  categories: string[];
+  status: 'all' | 'solved' | 'unsolved';
+  timeframe: 'all' | 'week' | 'month';
+}
 
 const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
   const { user } = useAuth();
@@ -51,12 +53,17 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
   const [selectedPostCategory, setSelectedPostCategory] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [availableCategories, setAvailableCategories] = useState<ExamCategory[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchUserProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    fetchAvailableCategories();
+  }, [profile]);
 
   const fetchUserProfile = async () => {
     try {
@@ -70,6 +77,26 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
       if (data) setProfile(data);
     } catch (error: any) {
       console.error('Profile fetch error:', error);
+    }
+  };
+
+  const fetchAvailableCategories = async () => {
+    try {
+      if (!profile?.exam_categories) return;
+      
+      const userCategories = Object.keys(profile.exam_categories);
+      
+      const { data, error } = await supabase
+        .from('exam_categories')
+        .select('*')
+        .in('main_category', userCategories)
+        .order('main_category', { ascending: true })
+        .order('sub_category', { ascending: true });
+
+      if (error) throw error;
+      setAvailableCategories(data || []);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
     }
   };
 
@@ -189,27 +216,74 @@ const PostForm = ({ onPostAdded }: { onPostAdded: () => void }) => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="postCategory" className="text-sm font-medium">Kategori Seçin</Label>
-            <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
-              <SelectTrigger className="border-border/50 hover:border-primary/50 transition-colors">
-                <SelectValue placeholder="Gönderi kategorisi seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(examCategories).map(([mainCat, subCats]) => (
-                  <div key={mainCat}>
-                    <div className="px-2 py-1 text-sm font-semibold text-primary">
-                      {mainCat}
+          <div className="flex gap-4">
+            {canEnableAiResponse && (
+              <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg border border-primary/20 flex-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-response" 
+                          checked={aiResponseEnabled}
+                          onCheckedChange={(checked) => setAiResponseEnabled(checked as boolean)}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                        />
+                        <label 
+                          htmlFor="ai-response" 
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Bot className="w-4 h-4 text-primary" />
+                          AI Yanıt
+                        </label>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Yapay zeka gönderinize otomatik yanıt verir</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+            
+            <div className="flex-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Label htmlFor="postCategory" className="text-sm font-medium flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4" />
+                        Kategori
+                      </Label>
+                      <Select value={selectedPostCategory} onValueChange={setSelectedPostCategory}>
+                        <SelectTrigger className="border-border/50 hover:border-primary/50 transition-colors mt-1">
+                          <SelectValue placeholder="Kategori seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCategories.length === 0 ? (
+                            <div className="px-2 py-1 text-sm text-muted-foreground">
+                              Önce profil sayfasından ilgi alanlarınızı seçin
+                            </div>
+                          ) : (
+                            availableCategories.map((category) => (
+                              <SelectItem key={category.id} value={category.sub_category}>
+                                <span className="text-xs text-muted-foreground mr-2">
+                                  {category.main_category}
+                                </span>
+                                {category.sub_category}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    {subCats.map((subCat) => (
-                      <SelectItem key={`${mainCat}-${subCat}`} value={subCat}>
-                        {subCat}
-                      </SelectItem>
-                    ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sadece profilde seçtiğiniz ana kategorilerin alt kategorileri görünür</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
@@ -285,12 +359,34 @@ const Index = () => {
   const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
   const [profile, setProfile] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    categories: [],
+    status: 'all',
+    timeframe: 'all'
+  });
+  const [categories, setCategories] = useState<ExamCategory[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchUserProfile();
     }
+    fetchCategories();
   }, [user]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('exam_categories')
+        .select('*')
+        .order('main_category', { ascending: true })
+        .order('sub_category', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -355,19 +451,78 @@ const Index = () => {
     fetchPosts();
   };
 
-  const categories = Object.keys(examCategories);
+  const handleFilterChange = (newFilters: FilterOptions) => {
+    setFilterOptions(newFilters);
+  };
 
-  // Filter posts by category
-  const filteredPosts = selectedCategory === 'all' 
-    ? posts 
-    : posts.filter(post => 
-        post.exam_categories?.some(cat => 
-          cat.toLowerCase().includes(selectedCategory.toLowerCase())
-        )
-      );
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) return 'Şimdi';
+    if (diffInMinutes < 60) return `${diffInMinutes}dk önce`;
+    if (diffInHours < 24) return `${diffInHours}sa önce`;
+    if (diffInDays < 7) return `${diffInDays}g önce`;
+    
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  const mainCategories = Array.from(new Set(categories.map(cat => cat.main_category)));
+
+  // Filter posts by category and other filters
+  const filteredPosts = posts.filter(post => {
+    // Category filter
+    if (selectedCategory !== 'all') {
+      if (!post.exam_categories?.some(cat => 
+        cat.toLowerCase().includes(selectedCategory.toLowerCase())
+      )) return false;
+    }
+
+    // Additional filters
+    if (filterOptions.categories.length > 0) {
+      if (!post.exam_categories?.some(cat => 
+        filterOptions.categories.includes(cat)
+      )) return false;
+    }
+
+    // Status filter
+    if (filterOptions.status === 'solved' && !post.is_correct_answer) return false;
+    if (filterOptions.status === 'unsolved' && post.is_correct_answer) return false;
+
+    // Timeframe filter
+    if (filterOptions.timeframe !== 'all') {
+      const postDate = new Date(post.created_at);
+      const now = new Date();
+      const diffInDays = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (filterOptions.timeframe === 'week' && diffInDays > 7) return false;
+      if (filterOptions.timeframe === 'month' && diffInDays > 30) return false;
+    }
+
+    return true;
+  });
 
   if (showInterests) {
-    return <InterestsSelection examCategories={examCategories} onComplete={handleInterestComplete} />;
+    return (
+      <InterestsSelection 
+        examCategories={categories.reduce((acc, cat) => {
+          if (!acc[cat.main_category]) {
+            acc[cat.main_category] = [];
+          }
+          acc[cat.main_category].push(cat.sub_category);
+          return acc;
+        }, {} as Record<string, string[]>)} 
+        onComplete={handleInterestComplete} 
+      />
+    );
   }
 
   return (
@@ -395,7 +550,7 @@ const Index = () => {
                 <Filter className="w-4 h-4 mr-2" />
                 Tümü
               </Button>
-              {categories.slice(0, 4).map((category) => (
+              {mainCategories.slice(0, 4).map((category) => (
                 <Button
                   key={category}
                   variant={selectedCategory === category ? 'default' : 'ghost'}
@@ -462,7 +617,7 @@ const Index = () => {
             >
               Tümü
             </Button>
-            {categories.map((category) => (
+            {mainCategories.map((category) => (
               <Button
                 key={category}
                 variant={selectedCategory === category ? 'default' : 'ghost'}
@@ -483,7 +638,15 @@ const Index = () => {
           {/* Posts Column */}
           <div className="lg:col-span-2 space-y-8">
             {user && (
-              <PostForm onPostAdded={handlePostAdded} />
+              <div className="space-y-4">
+                <PostForm onPostAdded={handlePostAdded} />
+                <div className="flex justify-start">
+                  <PostFilter 
+                    onFilterChange={handleFilterChange} 
+                    activeFilters={filterOptions} 
+                  />
+                </div>
+              </div>
             )}
             
             <div className="space-y-6">
@@ -514,7 +677,7 @@ const Index = () => {
                       avatar: post.profiles?.avatar_url || '',
                       avatar_url: post.profiles?.avatar_url
                     },
-                    timestamp: post.created_at,
+                    timestamp: formatRelativeTime(post.created_at),
                     interests: post.exam_categories || [],
                     likes: post.likes_count || 0,
                     comments: post.comments_count || 0,

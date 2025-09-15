@@ -18,6 +18,7 @@ export interface Post {
   shares_count: number | null;
   created_at: string;
   user_id: string;
+  correct_comment_id: string | null;
   profiles: {
     display_name: string | null;
     avatar_url: string | null;

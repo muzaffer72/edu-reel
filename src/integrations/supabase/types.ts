@@ -120,6 +120,33 @@ export type Database = {
           },
         ]
       }
+      exam_categories: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          main_category: string
+          sub_category: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          main_category: string
+          sub_category: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          main_category?: string
+          sub_category?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string

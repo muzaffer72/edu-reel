@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PostCard } from '@/components/PostCard';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { CategorySelector } from '@/components/CategorySelector';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface Profile {
   id: string;
@@ -21,6 +23,10 @@ interface Profile {
   avatar_url: string;
   exam_categories: any;
   created_at: string;
+}
+
+interface SelectedCategories {
+  [mainCategory: string]: string[];
 }
 
 interface Post {
@@ -57,6 +63,8 @@ const Profile = () => {
     bio: '',
   });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({});
 
   const isOwnProfile = !userId || userId === user?.id;
 
@@ -83,6 +91,10 @@ const Profile = () => {
         display_name: data.display_name || '',
         bio: data.bio || '',
       });
+      
+      if (data.exam_categories && Object.keys(data.exam_categories).length > 0) {
+        setSelectedCategories(data.exam_categories as SelectedCategories);
+      }
     } catch (error: any) {
       toast({
         title: 'Hata',
@@ -188,6 +200,31 @@ const Profile = () => {
     
     setUploadingAvatar(false);
     event.target.value = '';
+  };
+
+  const handleCategoriesChange = async (newCategories: SelectedCategories) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ exam_categories: newCategories })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setSelectedCategories(newCategories);
+      setProfile(prev => prev ? { ...prev, exam_categories: newCategories } : null);
+      
+      toast({
+        title: 'Başarılı',
+        description: 'İlgi alanlarınız güncellendi',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: 'İlgi alanları güncellenemedi',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
@@ -327,21 +364,44 @@ const Profile = () => {
                   </div>
 
                   {/* Exam Categories */}
-                  {getExamCategoriesArray().length > 0 && (
-                    <div>
-                      <div className="flex items-center mb-2">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
                         <BookOpen className="w-4 h-4 mr-2" />
                         <span className="text-sm font-medium">İlgi Alanları:</span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {getExamCategoriesArray().map((category) => (
-                          <Badge key={category} variant="secondary">
-                            {category}
-                          </Badge>
+                      {isOwnProfile && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCategorySelector(true)}
+                          className="text-xs"
+                        >
+                          Düzenle
+                        </Button>
+                      )}
+                    </div>
+                    {Object.keys(selectedCategories).length === 0 ? (
+                      <p className="text-muted-foreground text-sm">
+                        {isOwnProfile ? 'İlgi alanlarınızı seçin' : 'Henüz ilgi alanı seçmemiş'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {Object.entries(selectedCategories).map(([mainCat, subCats]) => (
+                          <div key={mainCat}>
+                            <h5 className="text-xs font-medium text-primary mb-1">{mainCat}</h5>
+                            <div className="flex flex-wrap gap-1">
+                              {subCats.map((subCat) => (
+                                <Badge key={subCat} variant="secondary" className="text-xs">
+                                  {subCat}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -384,6 +444,17 @@ const Profile = () => {
             </div>
           )}
         </div>
+
+        {/* Category Selector Dialog */}
+        <Dialog open={showCategorySelector} onOpenChange={setShowCategorySelector}>
+          <DialogContent className="max-w-2xl">
+            <CategorySelector
+              selectedCategories={selectedCategories}
+              onCategoriesChange={handleCategoriesChange}
+              onClose={() => setShowCategorySelector(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

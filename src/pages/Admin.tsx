@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Users, MessageSquare, Shield, Upload, Image, RefreshCw, Key } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { CategoryManagement } from '@/components/CategoryManagement';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -172,7 +173,7 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Ayarlar
@@ -180,6 +181,10 @@ const Admin = () => {
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Key className="h-4 w-4" />
             API Keys
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Kategoriler
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -362,6 +367,10 @@ const Admin = () => {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoryManagement />
         </TabsContent>
 
         <TabsContent value="users">
