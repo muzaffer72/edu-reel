@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot } from 'lucide-react';
+import { Heart, MessageCircle, Share2, CheckCircle, Video, Image as ImageIcon, Plus, User, LogOut, Paperclip, X, Bot, Settings } from 'lucide-react';
 import { PostCard } from '@/components/PostCard';
 import { VideoPost } from '@/components/VideoPost';
 import { InterestsSelection } from '@/components/InterestsSelection';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -24,6 +25,7 @@ interface SelectedCategories {
 const Index = () => {
   const { user, signOut } = useAuth();
   const { posts, loading, createPost, toggleLike, toggleCorrectAnswer } = usePosts();
+  const { isAdmin } = useAdmin();
   const { toast } = useToast();
   const { uploadFile, uploading } = useFileUpload();
   const [showInterests, setShowInterests] = useState(false);
@@ -209,6 +211,14 @@ const Index = () => {
                     Profil
                   </Button>
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="ghost" size="sm">
+                      <Settings className="w-4 h-4 mr-1" />
+                      Admin
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-1" />
                   Çıkış

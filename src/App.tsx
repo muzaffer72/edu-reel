@@ -6,6 +6,7 @@ import { useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,11 @@ const App = () => (
         <Route path="/profile/:userId?" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <Admin />
           </ProtectedRoute>
         } />
         <Route path="*" element={<NotFound />} />
